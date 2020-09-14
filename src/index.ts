@@ -10,8 +10,9 @@ declare global {
 
 button && container && makeSpeechRecognition(button, container);
 
-const onPause = debounce(1000, function () {
+const onPause = debounce(1000, function (string) {
   console.log("pause");
+  listenToText(string);
 });
 
 function makeSpeechRecognition(button: Element, _textContainer: Element) {
@@ -52,8 +53,14 @@ function makeSpeechRecognition(button: Element, _textContainer: Element) {
     }
     console.log(string);
     _textContainer.textContent = string;
-    onPause();
+    onPause(string);
   }
+}
+
+function listenToText(text: string) {
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "ru";
+  speechSynthesis.speak(utterance);
 }
 
 function getByRole(role: string) {

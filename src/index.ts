@@ -45,13 +45,13 @@ function makeSpeechRecognition(button: Element, _textContainer: Element) {
   }
 
   function onResult(e: SpeechRecognitionEvent) {
+    console.log(e);
+    let string = "";
     for (const res of e.results) {
-      console.log(res[0].transcript);
-      // const text = document.createTextNode(res[0].transcript);
-      // const p = document.createElement("p");
-      // p.appendChild(text);
-      // textContainer.appendChild(p);
+      string += res[0].transcript;
     }
+    console.log(string);
+    _textContainer.textContent = string;
     onPause();
   }
 }

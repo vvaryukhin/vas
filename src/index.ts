@@ -1,65 +1,113 @@
-import { debounce } from "utils";
+import { makeBeep } from "make-beep";
+import { textToSpeech } from "text-to-speech";
+import { appendChild, debounce, getByRole, last, render } from "utils";
+import { makeRecognitionService } from "recognition";
+import { isExitSpeechPhrase } from "is-exit-speech-phrase";
 
+import "assets/styles/index.scss";
+
+interface ISpeechResult {
+  text: string;
+  timestamp: number;
+  from: MessageAuthor;
+}
+
+type MessageAuthor = "user" | "bot";
+
+const useVoiceCheck = getByRole("use-voice");
 const button = getByRole("button");
 const container = getByRole("speech-results");
 
-button && container && makeSpeechRecognition(button, container);
+button &&
+  container &&
+  useVoiceCheck &&
+  makeSpeechRecognition(button, container, useVoiceCheck);
 
-const onPause = debounce(1000, function (string) {
-  console.log("pause", string);
-  listenToText();
-});
+const resultsArray: ISpeechResult[] = [];
 
-type MessageType = "user" | "bot";
-
-const resultsArray: {
-  text: string;
-  timestamp: number;
-  from: MessageType;
-}[] = [];
-
-function makeSpeechRecognition(button: Element, _textContainer: Element) {
+function makeSpeechRecognition(
+  button: Element,
+  textContainer: Element,
+  useVoiceCheck: Element
+) {
   let listening = false;
+  let useVoice = true;
+  /* let element = render("p", {
+    style: {
+      background: "#eee",
+      maxWidth: "80%",
+      padding: "5px",
+      marginBottom: "5px",
+      borderRadius: "3px",
+      alignSelf: "flex-end",
+    },
+  }); */
+  const recognition = makeRecognitionService({ onResult });
 
-  const recognition = new window.webkitSpeechRecognition();
-  recognition.continuous = true;
-  recognition.interimResults = true;
-
+  useVoiceCheck.addEventListener("change", (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    useVoice = target.checked;
+  });
   button.addEventListener("click", onButtonClick);
-  recognition.addEventListener("result", onResult);
-  recognition.lang = "ru";
 
-  function onButtonClick() {
+  async function onButtonClick() {
     if (listening) {
       stop();
-      button.textContent = "start recording";
     } else {
+      await textToSpeech(
+        "Ваш собеседник занят, вы можете оставить ему сообщение после сигнала."
+      );
+      await makeBeep();
       start();
-      button.textContent = "stop recording";
     }
+  }
+
+  function addSpeechResult({ text, timestamp, from }: ISpeechResult) {
+    resultsArray.push({
+      text,
+      timestamp,
+      from,
+    });
+    const textElement = render(
+      "p",
+      {
+        style: {
+          background: "#eee",
+          maxWidth: "80%",
+          padding: "5px",
+          marginBottom: "5px",
+          borderRadius: "3px",
+          alignSelf: from === "user" ? "flex-end" : "flex-start",
+        },
+      },
+      [text]
+    );
+    appendChild(textContainer, textElement);
   }
 
   function start() {
     listening = true;
+    textContainer.innerHTML = "";
+    resultsArray.length = 0;
     recognition.start();
+    button.textContent = "Закончить разговор";
   }
 
   function stop() {
     listening = false;
     recognition.stop();
+    button.textContent = "Начать разговор";
     console.log(resultsArray);
   }
 
   function onResult(e: SpeechRecognitionEvent) {
-    console.log(e);
-    let string = "";
+    if (!listening) return;
     for (const res of e.results) {
       const transcription = res[0].transcript;
-      string += transcription;
       if (res.isFinal) {
-        const now = Date.now();
         if (!resultsArray.find(({ text }) => text === transcription)) {
-          resultsArray.push({
+          const now = Date.now();
+          addSpeechResult({
             text: transcription,
             timestamp: now,
             from: "user",
@@ -67,20 +115,31 @@ function makeSpeechRecognition(button: Element, _textContainer: Element) {
         }
       }
     }
-    _textContainer.textContent = string;
-    onPause(string);
+
+    const lastResult = last(e.results);
+    if (lastResult.isFinal && isExitSpeechPhrase(lastResult[0].transcript)) {
+      onPause(true);
+      // element.remove();
+    } else {
+      // if (!element.parentNode) {
+      //   appendChild(textContainer, element);
+      // }
+      // element.textContent  = lastResult[0].transcript;
+      onPause();
+    }
   }
-}
 
-function listenToText() {
-  if (resultsArray[resultsArray.length - 1].from === "bot") return;
-  const msg = `Передам сообщение, представленное ниже, что-то еще?`;
-  const utterance = new SpeechSynthesisUtterance(msg);
-  resultsArray.push({ text: msg, timestamp: Date.now(), from: "bot" });
-  utterance.lang = "ru";
-  speechSynthesis.speak(utterance);
-}
+  const onPause = debounce(1000, function (isExit = false) {
+    respondToUser(isExit);
+  });
 
-function getByRole(role: string) {
-  return document.querySelector(`[data-role="${role}"]`);
+  function respondToUser(isExit: boolean) {
+    if (last(resultsArray).from === "bot") return;
+    console.log("from response", isExit);
+    const msg = isExit ? "Хорошего дня!" : `Передам сообщение, что-то еще?`;
+    console.log(msg, isExit);
+    addSpeechResult({ text: msg, timestamp: Date.now(), from: "bot" });
+    useVoice && textToSpeech(msg);
+    isExit && stop();
+  }
 }

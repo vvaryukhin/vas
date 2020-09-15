@@ -16,8 +16,21 @@ module.exports = {
     rules: [
       {
         test: /\.tsx?$/,
-        use: "ts-loader",
+        loader: "ts-loader",
         exclude: /node_modules/,
+      },
+      {
+        test: /\.mp3$/,
+        loader: "file-loader",
+        options: {
+          name: "[name].[contenthash].[ext]",
+        },
+        include: path.resolve(__dirname, "src", "assets"),
+        exclude: /node_modules/,
+      },
+      {
+        test: /\.s[ac]ss/,
+        use: ["style-loader", "css-loader", "sass-loader"],
       },
     ],
   },

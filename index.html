@@ -6,7 +6,21 @@
     <title>VAS</title>
   </head>
   <body>
-    <button data-role="button">Record</button>
-    <div data-role="speech-results" style="margin: 20px"></div>
+    <div style="padding: 20px">
+      <label class="form-switch">
+        <input type="checkbox" data-role="use-voice" checked />
+        <i></i>
+        Использовать звук
+      </label>
+      <div>
+        <button style="margin-top: 20px; padding: 5px 20px" data-role="button">
+          Начать разговор
+        </button>
+        <div
+          data-role="speech-results"
+          style="margin: 20px; display: flex; flex-direction: column"
+        ></div>
+      </div>
+    </div>
   </body>
 </html>

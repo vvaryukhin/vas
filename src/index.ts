@@ -73,7 +73,7 @@ function makeSpeechRecognition(button: Element, _textContainer: Element) {
 }
 
 function listenToText() {
-  if (resultsArray[resultsArray.length].from === "bot") return;
+  if (resultsArray[resultsArray.length - 1].from === "bot") return;
   const msg = `Передам сообщение, представленное ниже, что-то еще?`;
   const utterance = new SpeechSynthesisUtterance(msg);
   resultsArray.push({ text: msg, timestamp: Date.now(), from: "bot" });

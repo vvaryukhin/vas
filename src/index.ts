@@ -2,18 +2,21 @@ import { debounce } from "utils";
 
 const button = getByRole("button");
 const container = getByRole("speech-results");
-declare global {
-  interface Window {
-    webkitSpeechRecognition: typeof SpeechRecognition;
-  }
-}
 
 button && container && makeSpeechRecognition(button, container);
 
 const onPause = debounce(1000, function (string) {
-  console.log("pause");
-  listenToText(string);
+  console.log("pause", string);
+  listenToText();
 });
+
+type MessageType = "user" | "bot";
+
+const resultsArray: {
+  text: string;
+  timestamp: number;
+  from: MessageType;
+}[] = [];
 
 function makeSpeechRecognition(button: Element, _textContainer: Element) {
   let listening = false;
@@ -25,6 +28,7 @@ function makeSpeechRecognition(button: Element, _textContainer: Element) {
   button.addEventListener("click", onButtonClick);
   recognition.addEventListener("result", onResult);
   recognition.lang = "ru";
+
   function onButtonClick() {
     if (listening) {
       stop();
@@ -43,22 +47,36 @@ function makeSpeechRecognition(button: Element, _textContainer: Element) {
   function stop() {
     listening = false;
     recognition.stop();
+    console.log(resultsArray);
   }
 
   function onResult(e: SpeechRecognitionEvent) {
     console.log(e);
     let string = "";
     for (const res of e.results) {
-      string += res[0].transcript;
+      const transcription = res[0].transcript;
+      string += transcription;
+      if (res.isFinal) {
+        const now = Date.now();
+        if (!resultsArray.find(({ text }) => text === transcription)) {
+          resultsArray.push({
+            text: transcription,
+            timestamp: now,
+            from: "user",
+          });
+        }
+      }
     }
-    console.log(string);
     _textContainer.textContent = string;
     onPause(string);
   }
 }
 
-function listenToText(text: string) {
-  const utterance = new SpeechSynthesisUtterance(text);
+function listenToText() {
+  if (resultsArray[resultsArray.length].from === "bot") return;
+  const msg = `Передам сообщение, представленное ниже, что-то еще?`;
+  const utterance = new SpeechSynthesisUtterance(msg);
+  resultsArray.push({ text: msg, timestamp: Date.now(), from: "bot" });
   utterance.lang = "ru";
   speechSynthesis.speak(utterance);
 }

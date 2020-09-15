@@ -21,3 +21,6 @@ export function debounce<T extends AnyFunction>(ms: number, fn: T) {
 export function isNumber(val: unknown): val is number {
   return typeof val === "number";
 }
+
+let count = 0;
+export const uid = () => ++count;

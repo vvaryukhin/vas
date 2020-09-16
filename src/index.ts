@@ -1,5 +1,10 @@
-import { makeBeep } from "make-beep";
-import { textToSpeech } from "text-to-speech";
+import {
+  playBeep,
+  playHaveAGoodDay,
+  playLineIsBusy,
+  playSavedMessageSound,
+} from "make-beep";
+// import { textToSpeech } from "text-to-speech";
 import { appendChild, debounce, getByRole, last, render } from "utils";
 import { makeRecognitionService } from "recognition";
 import { isExitSpeechPhrase } from "is-exit-speech-phrase";
@@ -32,16 +37,6 @@ function makeSpeechRecognition(
 ) {
   let listening = false;
   let useVoice = true;
-  /* let element = render("p", {
-    style: {
-      background: "#eee",
-      maxWidth: "80%",
-      padding: "5px",
-      marginBottom: "5px",
-      borderRadius: "3px",
-      alignSelf: "flex-end",
-    },
-  }); */
   const recognition = makeRecognitionService({ onResult });
 
   useVoiceCheck.addEventListener("change", (e: Event) => {
@@ -54,10 +49,8 @@ function makeSpeechRecognition(
     if (listening) {
       stop();
     } else {
-      await textToSpeech(
-        "Ваш собеседник занят, вы можете оставить ему сообщение после сигнала."
-      );
-      await makeBeep();
+      await playLineIsBusy();
+      await playBeep();
       start();
     }
   }
@@ -119,12 +112,7 @@ function makeSpeechRecognition(
     const lastResult = last(e.results);
     if (lastResult.isFinal && isExitSpeechPhrase(lastResult[0].transcript)) {
       onPause(true);
-      // element.remove();
     } else {
-      // if (!element.parentNode) {
-      //   appendChild(textContainer, element);
-      // }
-      // element.textContent  = lastResult[0].transcript;
       onPause();
     }
   }
@@ -133,13 +121,14 @@ function makeSpeechRecognition(
     respondToUser(isExit);
   });
 
-  function respondToUser(isExit: boolean) {
+  async function respondToUser(isExit: boolean) {
     if (last(resultsArray).from === "bot") return;
-    console.log("from response", isExit);
     const msg = isExit ? "Хорошего дня!" : `Передам сообщение, что-то еще?`;
     console.log(msg, isExit);
     addSpeechResult({ text: msg, timestamp: Date.now(), from: "bot" });
-    useVoice && textToSpeech(msg);
+    if (useVoice) {
+      await (isExit ? playHaveAGoodDay() : playSavedMessageSound());
+    }
     isExit && stop();
   }
 }

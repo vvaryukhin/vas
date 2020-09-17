@@ -4,7 +4,8 @@
   "description": "Virtual Assistant Sifoxer",
   "main": "index.js",
   "scripts": {
-    "dev": "webpack-dev-server"
+    "dev": "webpack-dev-server",
+    "build": "webpack --env=production"
   },
   "repository": {
     "type": "git",
